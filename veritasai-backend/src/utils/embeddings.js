@@ -1,0 +1,1 @@
+// Helper that converts any text to a vector using Groq embeddings API.

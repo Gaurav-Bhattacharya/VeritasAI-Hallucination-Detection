@@ -1,0 +1,1 @@
+// Takes each claim, searches Pinecone for relevant documents, returns matches.

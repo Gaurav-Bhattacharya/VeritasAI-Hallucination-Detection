@@ -1,0 +1,1 @@
+// MongoDB schema that stores every check with timestamp, claim, result, confidence score.
