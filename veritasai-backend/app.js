@@ -16,7 +16,7 @@ app.use(
 );
 
 // Body Parser
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 // Routes
 app.use("/api", proxyRouter);

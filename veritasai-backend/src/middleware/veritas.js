@@ -1,3 +1,4 @@
+import { extractClaims } from "../services/claimExtractor.js";
 import { verifyClaims } from "../services/verifier.js";
 import { scoreClaim } from "../services/scorer.js";
 import { AuditLog } from "../models/AuditLog.js";
@@ -27,7 +28,7 @@ export const factCheckResponse = async (req, res, next) => {
     }
 
     // 2. Verify claims — vector search → evidence
-    const verifiedResults = await verifyClaims(claims);
+    const verifiedResults = (await verifyClaims(claims)).filter(Boolean);
 
     // 3. Score each claim — LLM reasoning → verdict
     const finalResults = await Promise.all(
@@ -40,7 +41,7 @@ export const factCheckResponse = async (req, res, next) => {
           reason: scored.reason,
           evidence: item.evidence,
         };
-      })
+      }),
     );
 
     // 4. Save to MongoDB
@@ -57,7 +58,6 @@ export const factCheckResponse = async (req, res, next) => {
         auditId: audit._id,
       },
     });
-
   } catch (error) {
     next(error);
   }
