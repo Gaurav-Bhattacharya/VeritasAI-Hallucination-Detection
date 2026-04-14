@@ -1,12 +1,7 @@
 import mongoose from "mongoose";
 
-const auditLogSchema = new mongoose.Schema(
+const claimResultSchema = new mongoose.Schema(
   {
-    originalResponse: {
-      type: String,
-      required: true,
-      trim: true,
-    },
     claim: {
       type: String,
       required: true,
@@ -23,19 +18,30 @@ const auditLogSchema = new mongoose.Schema(
       max: 100,
       default: 0,
     },
-    evidence: [
-      {
-        title: String,
-        snippet: String,
-        url: String,
-        score: Number,
-      },
-    ],
     reason: {
       type: String,
       default: "",
       trim: true,
     },
+    evidence: [
+      {
+        score: Number,
+        text: String,
+        source: String,
+      },
+    ],
+  },
+  { _id: false },
+);
+
+const auditLogSchema = new mongoose.Schema(
+  {
+    originalResponse: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    claims: [claimResultSchema],
   },
   {
     timestamps: true,

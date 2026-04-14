@@ -2,7 +2,7 @@ import { getIndex } from "../config/pinecone.js";
 import { getEmbedding } from "../utils/embeddings.js";
 
 export const verifyClaim = async (claim) => {
-  if (!claim || typeof claim !== "string") return null;
+  if (!claim || typeof claim !== "string") return { claim, evidence: [] };
 
   try {
     const vector = await getEmbedding(claim);

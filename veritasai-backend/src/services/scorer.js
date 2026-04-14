@@ -1,7 +1,10 @@
 import Groq from "groq-sdk";
 
+let groqClient;
+
 export const scoreClaim = async (claim, evidence) => {
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  if (!groqClient) groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  const groq = groqClient;
 
   if (!Array.isArray(evidence) || evidence.length === 0) {
     return {
@@ -14,7 +17,10 @@ export const scoreClaim = async (claim, evidence) => {
 
   try {
     const evidenceText = evidence
-      .map((e, i) => `${i + 1}. ${e.text}`)
+      .map(
+        (e, i) =>
+          `${i + 1}. [Relevance: ${e.score}%] [Source: ${e.source}] ${e.text}`,
+      )
       .join("\n");
 
     const prompt = `
@@ -44,7 +50,7 @@ Rules:
 `;
 
     const completion = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
       temperature: 0,
       messages: [{ role: "user", content: prompt }],
     });
@@ -66,8 +72,9 @@ Rules:
         ? parsed.verdict
         : "unverifiable",
       confidence:
-        typeof parsed.confidence === "number" ? parsed.confidence : 50,
-      reason: parsed.reason || "No reason provided",
+        typeof parsed.confidence === "number" && parsed.confidence > 0
+          ? parsed.confidence
+          : 20,
     };
   } catch (error) {
     console.error("Scoring error:", error.message);

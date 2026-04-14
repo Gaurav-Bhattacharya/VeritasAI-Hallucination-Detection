@@ -55,6 +55,7 @@ const documents = [
   "WhatsApp was acquired by Facebook in 2014 for approximately 19 billion dollars.",
   "Python was created by Guido van Rossum and first released in 1991.",
   "The COVID-19 pandemic was declared a global emergency by WHO in January 2020.",
+  "The capital of France is Paris.",
 ];
 
 ingestData(documents);
