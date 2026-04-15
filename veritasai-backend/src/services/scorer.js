@@ -75,6 +75,7 @@ Rules:
         typeof parsed.confidence === "number" && parsed.confidence > 0
           ? parsed.confidence
           : 20,
+      reason: parsed.reason || "No explanation provided",
     };
   } catch (error) {
     console.error("Scoring error:", error.message);
