@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -40,14 +42,9 @@ const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (curl, Postman, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new AppError("Not allowed by CORS", 403));
-      }
-    },
+    origin:'*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   }),
 );

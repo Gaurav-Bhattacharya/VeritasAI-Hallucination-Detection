@@ -6,46 +6,37 @@ export const scoreClaim = async (claim, evidence) => {
   if (!groqClient) groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const groq = groqClient;
 
-  if (!Array.isArray(evidence) || evidence.length === 0) {
-    return {
-      claim,
-      verdict: "unverifiable",
-      confidence: 20,
-      reason: "No relevant documents found",
-    };
-  }
+  // Prepare evidence text, but don't 'return' if it's empty
+  const hasEvidence = Array.isArray(evidence) && evidence.length > 0;
+  const evidenceText = hasEvidence
+    ? evidence
+        .map((e, i) => `${i + 1}. [Relevance: ${e.score}%] [Source: ${e.source}] ${e.text}`)
+        .join("\n")
+    : "No direct matches found in the local database.";
 
   try {
-    const evidenceText = evidence
-      .map(
-        (e, i) =>
-          `${i + 1}. [Relevance: ${e.score}%] [Source: ${e.source}] ${e.text}`,
-      )
-      .join("\n");
-
     const prompt = `
-You are a fact-checking system.
+You are a professional Fact-Checking AI. Today's date is April 15, 2026.
 
-Claim:
+Claim to Verify:
 "${claim}"
 
-Evidence:
+Local Database Evidence:
 ${evidenceText}
 
 Task:
-Decide whether the evidence:
-- supports the claim
-- contradicts the claim
-- is unrelated to the claim
+Determine if the claim is true or false based on the provided evidence. 
 
-Rules:
-- Return ONLY valid JSON
-- No explanation outside JSON
-- Format:
+IMPORTANT RULES:
+1. If "Local Database Evidence" provides a clear answer, prioritize it.
+2. If the local database is empty or unrelated, use your internal training data to verify common facts (e.g., Science, Geography, History).
+3. If the claim is about a future event or something impossible to know, mark as "unverifiable".
+
+Return ONLY a JSON object:
 {
-  "verdict": "verified | false | unverifiable",
+  "verdict": "verified" | "false" | "unverifiable",
   "confidence": number (0-100),
-  "reason": "short explanation"
+  "reason": "A brief explanation of why this verdict was chosen."
 }
 `;
 
@@ -59,6 +50,7 @@ Rules:
 
     let parsed;
     try {
+      // Handles cases where LLM wraps JSON in markdown code blocks
       const cleaned = output.replace(/```json|```/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
@@ -68,13 +60,8 @@ Rules:
     const validVerdicts = ["verified", "false", "unverifiable"];
     return {
       claim,
-      verdict: validVerdicts.includes(parsed.verdict)
-        ? parsed.verdict
-        : "unverifiable",
-      confidence:
-        typeof parsed.confidence === "number" && parsed.confidence > 0
-          ? parsed.confidence
-          : 20,
+      verdict: validVerdicts.includes(parsed.verdict) ? parsed.verdict : "unverifiable",
+      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 20,
       reason: parsed.reason || "No explanation provided",
     };
   } catch (error) {
@@ -83,7 +70,7 @@ Rules:
       claim,
       verdict: "unverifiable",
       confidence: 20,
-      reason: "LLM scoring failed",
+      reason: "LLM scoring failed or timed out",
     };
   }
 };

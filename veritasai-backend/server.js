@@ -1,7 +1,4 @@
-// NOTE: In ESM, import statements are hoisted and evaluated before any
-// top-level code runs. This means the uncaughtException handler below
-// will NOT catch errors thrown during module loading (e.g. syntax errors
-// in imported files). This is expected ESM behavior.
+// Keep the exception handlers at the very top
 process.on("uncaughtException", (err) => {
   console.error("UNCAUGHT EXCEPTION — shutting down...");
   console.error(err.name, err.message);
@@ -9,37 +6,43 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-import "dotenv/config";
-import app from "./app.js";
-import connectDB from "./src/config/db.js";
+import "dotenv/config"; // 1. Load environment variables FIRST
 
-const PORT = process.env.PORT || 5000;
+// 2. Wrap the startup in an async function to control timing
+async function bootstrap() {
+  try {
+    // 3. Dynamically import DB and App AFTER dotenv is loaded
+    const { default: connectDB } = await import("./src/config/db.js");
+    const { default: app } = await import("./app.js");
 
-let server;
+    const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-  server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(
-      `Server running on port ${PORT} | env: ${process.env.NODE_ENV || "development"}`,
-    );
-  });
-});
+    // 4. Connect to DB
+    await connectDB();
 
-process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED REJECTION — shutting down...");
-  console.error(err.name, err.message);
+    // 5. Start Server
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      console.log(
+        `✅ Server running on port ${PORT} | env: ${process.env.NODE_ENV || "development"}`
+      );
+    });
 
-  if (server) {
-    server.close(() => process.exit(1));
-  } else {
+    // Handle rejections and termination within the scope where 'server' exists
+    process.on("unhandledRejection", (err) => {
+      console.error("UNHANDLED REJECTION — shutting down...");
+      console.error(err.name, err.message);
+      server.close(() => process.exit(1));
+    });
+
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM received — shutting down gracefully...");
+      server.close(() => process.exit(0));
+    });
+
+  } catch (error) {
+    console.error("❌ Failed to start server:", error.message);
     process.exit(1);
   }
-});
+}
 
-// Graceful shutdown on SIGTERM (e.g. from Docker, Heroku, Railway)
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received — shutting down gracefully...");
-  if (server) {
-    server.close(() => process.exit(0));
-  }
-});
+bootstrap();
